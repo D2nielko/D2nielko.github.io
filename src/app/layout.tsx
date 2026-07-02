@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Your Name - CS Student Portfolio",
-  description: "Computer Science student portfolio showcasing projects, skills, and experience",
+  title: "Daniel Ko — CS Student & Software Developer",
+  description: "Computer Science student at UBC. Software developer interested in algorithms and competitive programming, building an interactive algorithm visualizer and ML projects.",
 };
 
 export default function RootLayout({
