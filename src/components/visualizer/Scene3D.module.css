@@ -1,0 +1,314 @@
+/*
+ * Scene3D — pure-CSS 3D Dijkstra board.
+ *
+ * Geometry model: the board lies in the XY plane and is tilted toward the
+ * viewer with rotateX. Every cell is a tiny 3D "block": a top face lifted by
+ * translateZ(var(--h)) plus three side faces (front / right / left) built
+ * from pseudo-elements rotated 90deg around the block edges. Flat cells keep
+ * --h at 0 so their side faces collapse to nothing.
+ *
+ * Per-cell custom properties (set inline from React):
+ *   --h : extrusion height in px (walls fixed, visited ~ distance, capped)
+ *   --d : normalized settled distance 0..1, drives the cool->warm color ramp
+ */
+
+.scene {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 420px;
+  perspective: 1100px;
+  perspective-origin: 50% 28%;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  display: grid;
+  place-items: center;
+
+  /* ---- light theme palette ---- */
+  --tile: color-mix(in srgb, #e2e8f0 72%, #ffffff); /* slate-200 wash */
+  --tile-edge: rgba(100, 116, 139, 0.28);
+  --board-bg: linear-gradient(160deg, #f8fafc, #e2e8f0);
+  --board-edge: rgba(148, 163, 184, 0.55);
+  --board-shadow: rgba(51, 65, 85, 0.35);
+  --wall-top: linear-gradient(160deg, #475569, #1e293b);
+  --wall-side: #0f172a;
+  --wall-side-lit: #334155;
+  --ramp-l: 62%; /* lightness of the visited color ramp */
+  --ramp-s: 78%;
+  --path-core: #fbbf24; /* amber-400 */
+  --path-glow: rgba(251, 191, 36, 0.55);
+  --start-color: #10b981; /* emerald-500 */
+  --end-color: #f43f5e; /* rose-500 */
+  --marker-ring: rgba(255, 255, 255, 0.85);
+}
+
+@media (prefers-color-scheme: dark) {
+  .scene {
+    --tile: color-mix(in srgb, #1e293b 82%, #000000);
+    --tile-edge: rgba(148, 163, 184, 0.16);
+    --board-bg: linear-gradient(160deg, #0f172a, #020617);
+    --board-edge: rgba(51, 65, 85, 0.9);
+    --board-shadow: rgba(0, 0, 0, 0.7);
+    --wall-top: linear-gradient(160deg, #64748b, #334155);
+    --wall-side: #020617;
+    --wall-side-lit: #1e293b;
+    --ramp-l: 55%;
+    --ramp-s: 82%;
+    --path-core: #fcd34d; /* amber-300 */
+    --path-glow: rgba(252, 211, 77, 0.5);
+    --start-color: #34d399; /* emerald-400 */
+    --end-color: #fb7185; /* rose-400 */
+    --marker-ring: rgba(255, 255, 255, 0.7);
+  }
+}
+
+/* The camera rig: transform comes from inline style (immediate, no
+   transition — zoom/pan/tilt must track the pointer without lag). */
+.board {
+  position: relative;
+  transform-style: preserve-3d;
+  display: grid;
+  grid-template-columns: repeat(var(--cols), var(--cell));
+  grid-auto-rows: var(--cell);
+  gap: var(--gap);
+  padding: calc(var(--gap) * 4);
+  --cell: 30px;
+  --gap: 3px;
+  background: var(--board-bg);
+  border: 1px solid var(--board-edge);
+  border-radius: 10px;
+  will-change: transform;
+}
+
+/* Soft ground shadow: a blurred plane pushed below the board so the whole
+   slab reads as floating. */
+.board::before {
+  content: "";
+  position: absolute;
+  inset: 4%;
+  transform: translateZ(-46px);
+  background: var(--board-shadow);
+  filter: blur(34px);
+  border-radius: 32px;
+  pointer-events: none;
+}
+
+/* ------------------------------------------------------------------ */
+/* Cells                                                              */
+/* ------------------------------------------------------------------ */
+
+.cell {
+  position: relative;
+  transform-style: preserve-3d;
+  --h: 0px;
+  --d: 0;
+  /* cool (210 = blue) -> warm (18 = orange) ramp driven by --d */
+  --ramp: hsl(calc(210 - var(--d) * 192) var(--ramp-s) var(--ramp-l));
+  --side: color-mix(in srgb, var(--ramp) 62%, #0f172a);
+  --side-lit: color-mix(in srgb, var(--ramp) 80%, #0f172a);
+}
+
+/* Top face — carries the tile color; rises via translateZ. */
+.top {
+  position: absolute;
+  inset: 0;
+  transform: translateZ(var(--h));
+  transform-style: preserve-3d;
+  border-radius: 3px;
+  background: var(--tile);
+  box-shadow: inset 0 0 0 1px var(--tile-edge);
+  transition:
+    transform 480ms cubic-bezier(0.22, 1.4, 0.36, 1),
+    background-color 480ms ease,
+    box-shadow 480ms ease;
+}
+
+/*
+ * Side faces. Heights/widths equal the extrusion --h, so flat cells render
+ * no visible sides. Each face is a quad hinged on a block edge:
+ *   front: hinged on the cell's bottom edge, rotated up (rotateX -90)
+ *   right: hinged on the cell's right edge  (rotateY  90)
+ *   left : hinged on the TOP FACE's left edge, folded down (rotateY 90)
+ */
+.cell::before {
+  /* front face */
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--h);
+  transform-origin: 50% 100%;
+  transform: rotateX(-90deg);
+  background: var(--side);
+  border-radius: 0 0 2px 2px;
+  transition: height 480ms cubic-bezier(0.22, 1.4, 0.36, 1), background-color 480ms ease;
+  pointer-events: none;
+}
+
+.cell::after {
+  /* right face */
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: var(--h);
+  transform-origin: 100% 50%;
+  transform: rotateY(90deg);
+  background: var(--side-lit);
+  transition: width 480ms cubic-bezier(0.22, 1.4, 0.36, 1), background-color 480ms ease;
+  pointer-events: none;
+}
+
+.top::before {
+  /* left face — lives in the lifted top-face plane and folds down to z=0 */
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: var(--h);
+  transform-origin: 0% 50%;
+  transform: rotateY(90deg);
+  background: var(--side);
+  transition: width 480ms cubic-bezier(0.22, 1.4, 0.36, 1), background-color 480ms ease;
+  pointer-events: none;
+}
+
+/* ------------------------------------------------------------------ */
+/* Cell states                                                        */
+/* ------------------------------------------------------------------ */
+
+.wall {
+  --h: 24px;
+  --side: var(--wall-side);
+  --side-lit: var(--wall-side-lit);
+}
+
+.wall .top {
+  background: var(--wall-top);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 0 0 1px rgba(15, 23, 42, 0.45);
+}
+
+.visited .top {
+  background: var(--ramp);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    inset 0 0 0 1px color-mix(in srgb, var(--ramp) 55%, #0f172a);
+}
+
+/* Path cells: warm core + pulsing halo. The glow animates on the lifted
+   top face so it hovers with the block. */
+.path .top {
+  background: linear-gradient(160deg, #fde68a, var(--path-core));
+  box-shadow:
+    inset 0 0 0 1px rgba(180, 83, 9, 0.55),
+    0 0 10px 2px var(--path-glow);
+  animation: pathPulse 1.4s ease-in-out infinite;
+}
+
+.path {
+  --side: color-mix(in srgb, var(--path-core) 55%, #451a03);
+  --side-lit: color-mix(in srgb, var(--path-core) 72%, #451a03);
+}
+
+@keyframes pathPulse {
+  0%,
+  100% {
+    box-shadow:
+      inset 0 0 0 1px rgba(180, 83, 9, 0.55),
+      0 0 6px 1px var(--path-glow);
+    filter: brightness(1);
+  }
+  50% {
+    box-shadow:
+      inset 0 0 0 1px rgba(180, 83, 9, 0.55),
+      0 0 18px 6px var(--path-glow);
+    filter: brightness(1.18);
+  }
+}
+
+/* Start / end tiles get saturated bases even before the run. */
+.start .top {
+  background: radial-gradient(
+    circle at 50% 42%,
+    color-mix(in srgb, var(--start-color) 55%, white),
+    var(--start-color) 72%
+  );
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--start-color) 60%, black);
+}
+
+.end .top {
+  background: radial-gradient(
+    circle at 50% 42%,
+    color-mix(in srgb, var(--end-color) 55%, white),
+    var(--end-color) 72%
+  );
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--end-color) 60%, black);
+}
+
+/* Floating beacon markers above start/end. Children of .top, so they ride
+   the block if it ever rises; preserve-3d keeps the translateZ real. */
+.marker {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  border-radius: 50%;
+  pointer-events: none;
+  animation: markerBob 2.2s ease-in-out infinite;
+}
+
+.markerStart {
+  background: var(--start-color);
+  box-shadow:
+    0 0 0 3px var(--marker-ring),
+    0 0 14px 4px color-mix(in srgb, var(--start-color) 70%, transparent);
+}
+
+.markerEnd {
+  background: var(--end-color);
+  border-radius: 2px;
+  box-shadow:
+    0 0 0 3px var(--marker-ring),
+    0 0 14px 4px color-mix(in srgb, var(--end-color) 70%, transparent);
+}
+
+@keyframes markerBob {
+  0%,
+  100% {
+    transform: translateZ(14px);
+  }
+  50% {
+    transform: translateZ(22px);
+  }
+}
+
+/* Hover affordance for editing walls (only meaningful on flat-ish cells). */
+@media (hover: hover) {
+  .cell:not(.wall):not(.start):not(.end):hover .top {
+    box-shadow:
+      inset 0 0 0 1px var(--tile-edge),
+      inset 0 0 0 99px rgba(100, 116, 139, 0.18);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .top,
+  .cell::before,
+  .cell::after,
+  .top::before {
+    transition-duration: 1ms;
+  }
+  .path .top,
+  .marker {
+    animation: none;
+  }
+}

@@ -56,13 +56,13 @@ export default function Home() {
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div>
               <p className="text-slate-600 dark:text-slate-300 mb-4">
-                I&apos;m a Computer Science student at UBC who likes building software I can reason about
-                all the way down. I&apos;ve shipped fixes in production at Optum, led an infrastructure
-                deployment in the ROKAF, and built ML and full-stack projects on my own.
+                I&apos;m a dedicated Computer Science student with a passion for problem-solving and creating
+                efficient, scalable software solutions. My journey in programming started with curiosity
+                and has evolved into a deep appreciation for clean code and innovative technology.
               </p>
               <p className="text-slate-600 dark:text-slate-300 mb-6">
-                Lately I&apos;m focused on algorithms and competitive programming, which is why I&apos;m
-                building an interactive algorithm visualizer as the centerpiece of this site.
+                When I&apos;m not coding, you can find me contributing to open-source projects, learning new
+                technologies, or participating in hackathons and coding competitions.
               </p>
               <div className="flex flex-wrap gap-2">
                 <span className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-3 py-1 rounded-full text-sm">Algorithms</span>
