@@ -1,0 +1,10 @@
+/* From-only keyframe: animates back to the row's natural background. */
+@keyframes queuePanelFlash {
+  from {
+    background-color: rgba(59, 130, 246, 0.45);
+  }
+}
+
+.flash {
+  animation: queuePanelFlash 600ms ease-out;
+}
