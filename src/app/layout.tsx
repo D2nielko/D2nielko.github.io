@@ -18,8 +18,16 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
-  title: "Daniel Ko — CS Student & Software Developer",
-  description: "Computer Science student at UBC. Software developer interested in algorithms and competitive programming, building an interactive algorithm visualizer and ML projects.",
+  title: {
+    default: siteConfig.name,
+    template: `%s — ${siteConfig.name}`,
+  },
+  description: siteConfig.description,
+  alternates: {
+    types: {
+      "application/rss+xml": [{ url: "/feed.xml", title: siteConfig.name }],
+    },
+  },
 };
 
 export default function RootLayout({

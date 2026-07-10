@@ -21,6 +21,13 @@ export default function Footer() {
         >
           LinkedIn
         </a>
+        <span aria-hidden="true">·</span>
+        <a
+          href="/feed.xml"
+          className="hover:text-neutral-900 dark:hover:text-neutral-100"
+        >
+          RSS
+        </a>
       </div>
     </footer>
   );
