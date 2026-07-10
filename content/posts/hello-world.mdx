@@ -1,8 +1,73 @@
 ---
 title: "Hello, world"
 date: "2026-07-10"
-description: "First post on the rebuilt site."
+description: "A quick tour of the writing setup: code, math, and tables."
 category: "swe"
 ---
 
-This is a placeholder post. It will be expanded in a later phase.
+This is the first post on the rebuilt site. It doubles as a smoke test for the
+MDX pipeline — syntax highlighting, math, and tables should all render
+correctly below.
+
+## Binary search
+
+Binary search is the canonical example of a divide-and-conquer algorithm. It
+runs in $O(\log n)$ time on a sorted array by halving the search space on
+each comparison.
+
+```python
+def binary_search(arr: list[int], target: int) -> int:
+    lo, hi = 0, len(arr) - 1
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        if arr[mid] == target:
+            return mid
+        if arr[mid] < target:
+            lo = mid + 1
+        else:
+            hi = mid - 1
+    return -1
+```
+
+For competitive programming, fast I/O matters just as much as the algorithm
+itself. Here's a typical C++ scaffold:
+
+```cpp
+#include <bits/stdc++.h>
+using namespace std;
+
+int main() {
+    ios_base::sync_with_stdio(false);
+    cin.tie(nullptr);
+
+    int n;
+    cin >> n;
+    vector<int> a(n);
+    for (auto &x : a) cin >> x;
+
+    cout << *max_element(a.begin(), a.end()) << "\n";
+    return 0;
+}
+```
+
+## A little math
+
+Softmax turns a vector of real-valued scores into a probability distribution.
+For a vector $z \in \mathbb{R}^n$:
+
+$$
+\text{softmax}(z)_i = \frac{e^{z_i}}{\sum_{j=1}^{n} e^{z_j}}
+$$
+
+It shows up everywhere from multiclass classifiers to attention weights in
+transformers.
+
+## Complexity cheat sheet
+
+| Algorithm | Time | Space |
+| --- | --- | --- |
+| Binary search | $O(\log n)$ | $O(1)$ |
+| Merge sort | $O(n \log n)$ | $O(n)$ |
+| Dijkstra (binary heap) | $O((V + E) \log V)$ | $O(V)$ |
+
+More posts to come.

@@ -24,3 +24,35 @@ body {
   color: var(--foreground);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
+
+/* Shiki dual-theme: rehype-pretty-code emits both palettes as CSS vars
+   (defaultColor: false) — pick per theme class. */
+pre[data-theme],
+pre[data-theme] span,
+code[data-theme],
+code[data-theme] span {
+  color: var(--shiki-light);
+  background-color: var(--shiki-light-bg);
+}
+
+.dark pre[data-theme],
+.dark pre[data-theme] span,
+.dark code[data-theme],
+.dark code[data-theme] span {
+  color: var(--shiki-dark);
+  background-color: var(--shiki-dark-bg);
+}
+
+pre {
+  overflow-x: auto;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+pre > code {
+  display: grid;
+  padding: 0;
+  background: transparent;
+}
